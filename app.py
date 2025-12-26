@@ -1,72 +1,49 @@
-# app.py
 import streamlit as st
 import networkx as nx
-import json
-from pyvis.network import Network
-import streamlit.components.v1 as components
+# 引入我們自製的模組
+from modules.mock_backend import GraphManager
 
-# 1. 初始化 session state
-def initialize_session_state():
-    if 'graph' not in st.session_state:
-        # 創建一個空的 NetworkX 圖物件
-        st.session_state['graph'] = nx.Graph()
+# 1. 頁面設定 (必須是第一個 Streamlit 指令)
+st.set_page_config(
+    page_title="Nexus Graph | 互動式知識圖譜",
+    page_icon="🕸️",
+    layout="wide", # 使用寬版面，看起來比較專業
+    initial_sidebar_state="expanded"
+)
 
-# 呼叫初始化函式
-initialize_session_state()
+# 2. 初始化 Session State (狀態管理)
+if 'graph' not in st.session_state:
+    # 第一次啟動時，載入我們的假資料
+    manager = GraphManager()
+    st.session_state['graph'] = manager.get_initial_graph()
+    st.session_state['manager'] = manager # 把後端管理器也存起來
 
-# 2. 核心邏輯函式
-def add_character(name, description=""):
-    """新增一個角色節點到圖中"""
-    if name and not st.session_state['graph'].has_node(name):
-        st.session_state['graph'].add_node(name, title=description, type='character')
-        st.success(f"角色 '{name}' 新增成功！")
-    elif name:
-        st.warning(f"角色 '{name}' 已存在。")
+# 3. 標題與排版
+st.title("🕸️ Nexus Graph 知識圖譜編輯器")
+st.markdown("---") # 分隔線
 
-def add_relationship(source, target, relationship_type):
-    """新增一條關係邊到圖中"""
-    if source and target and relationship_type:
-        if st.session_state['graph'].has_edge(source, target):
-            # 如果關係已存在，可以選擇更新或提示
-            st.warning(f"'{source}' 和 '{target}' 之間的關係已存在。")
-        else:
-            st.session_state['graph'].add_edge(source, target, label=relationship_type)
-            st.success(f"成功建立關係：{source} -[{relationship_type}]-> {target}")
-
-def save_graph_to_json(filename):
-    """將圖譜資料儲存為 JSON 檔案"""
-    graph_data = nx.node_link_data(st.session_state['graph'])
-    with open(f"data/{filename}.json", "w", encoding="utf-8") as f:
-        json.dump(graph_data, f, ensure_ascii=False, indent=4)
-    st.success(f"圖譜已成功儲存至 data/{filename}.json")
-
-def load_graph_from_json(uploaded_file):
-    """從上傳的 JSON 檔案讀取圖譜資料"""
-    graph_data = json.load(uploaded_file)
-    st.session_state['graph'] = nx.node_link_graph(graph_data)
-    st.success(f"已成功從 {uploaded_file.name} 載入圖譜！")
-
-# app.py (在側邊欄 UI 區塊加入)
+# 4. 側邊欄設計 (目前先放標題，下一步我們填滿它)
 with st.sidebar:
-    # --- 儲存與讀取區塊 ---
-    st.header("專案管理")
-    project_name = st.text_input("專案檔名", value="my_story")
-    if st.button("儲存圖譜"):
-        save_graph_to_json(project_name)
+    st.header("🎛️ 控制台")
+    st.info("目前運作模式：Mocking (模擬數據)")
+    st.markdown("---")
 
-    uploaded_file = st.file_uploader("選擇一個圖譜 JSON 檔案來載入", type="json")
-    if uploaded_file is not None:
-        load_graph_from_json(uploaded_file)
-        # 重新整理頁面以顯示載入的圖
-        st.rerun()
+# 5. 主畫面分區 (兩欄式佈局：左邊操作，右邊顯示)
+col_left, col_right = st.columns([1, 2]) # 左邊寬度 1，右邊寬度 2
 
+with col_left:
+    st.subheader("📝 編輯區域")
+    st.write("（這裡之後會放入新增角色與關係的表單）")
 
-
-# 測試 UI 用區塊
-#st.divider() # 分隔線
-#st.write("後端功能測試區")
-#test_name = st.text_input("測試角色名稱")
-#if st.button("測試新增角色"):
-#    add_character(test_name)
-#    # 顯示目前圖裡的節點，證明真的有加進去
-#    st.write(st.session_state['graph'].nodes)
+with col_right:
+    st.subheader("📊 圖譜預覽")
+    # 暫時先用文字顯示節點數量，證明程式有跑起來
+    num_nodes = st.session_state['graph'].number_of_nodes()
+    num_edges = st.session_state['graph'].number_of_edges()
+    
+    # 使用 Metric 元件顯示數據，看起來很專業
+    m1, m2 = st.columns(2)
+    m1.metric("角色數量", num_nodes)
+    m2.metric("關係連結", num_edges)
+    
+    st.warning("視覺化模組尚未載入 (將在 Step 6 實作)")
