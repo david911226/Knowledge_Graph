@@ -94,6 +94,13 @@ st.markdown("---")
 with st.sidebar:
     st.header("🎛️ 專案控制台")
     st.info("目前模式：Mocking (模擬後端)")
+
+    st.header("🔑 API 設定")
+    api_key = st.text_input("OpenAI API Key", type="password", placeholder="sk-...")
+    if not api_key:
+        st.warning("⚠️ 請輸入 API Key 才能使用 AI 功能")
+    
+    st.markdown("---")
     
     # 專案存檔區塊
     with st.expander("💾 專案管理 (Save/Load)", expanded=True):
@@ -200,17 +207,22 @@ with col_left:
         # 1. 輸入區
         source_text = st.text_area("故事文本", height=150, placeholder="請貼上一段小說內容...")
         
-        if st.button("🚀 開始分析", use_container_width=True):
+        if st.button("🚀 開始分析 (Real AI)", use_container_width=True):
             if not source_text:
                 st.warning("⚠️ 請先貼上文章內容！")
+            elif not api_key:
+                st.error("❌ 尚未設定 OpenAI API Key！請在左側欄位輸入。")
             else:
-                with st.spinner("🤖 AI 正在閱讀故事並分析關係..."):
-                    # 呼叫模擬的 AI
-                    ai_nodes, ai_edges = st.session_state['manager'].simulate_ai_extraction(source_text)
+                with st.spinner("🤖 AI 正在閱讀故事並分析關係 (這可能需要幾秒鐘)..."):
+                    # 呼叫真實的後端函式
+                    ai_nodes, ai_edges, error = st.session_state['manager'].process_text_with_ai(source_text, api_key)
                     
-                    # 將結果暫存在 session_state，這樣按鈕按完才不會消失
-                    st.session_state['ai_result'] = {"nodes": ai_nodes, "edges": ai_edges}
-                    st.toast("分析完成！請確認下方結果", icon="✅")
+                    if error:
+                        st.error(f"AI 呼叫失敗：{error}")
+                    else:
+                        # 將結果暫存在 session_state
+                        st.session_state['ai_result'] = {"nodes": ai_nodes, "edges": ai_edges}
+                        st.toast("分析完成！請往下確認結果", icon="✅")
 
         # 2. 結果審核區 (如果有分析結果才顯示)
         if 'ai_result' in st.session_state:

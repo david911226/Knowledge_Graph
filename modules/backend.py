@@ -1,6 +1,7 @@
 import networkx as nx
 import json
 import os
+from openai import OpenAI
 
 class GraphManager:
     def __init__(self):
@@ -56,20 +57,43 @@ class GraphManager:
         except Exception as e:
             return None, f"❌ Load failed: {str(e)}"
 
-    # --- AI 模擬部分 (保留給 Demo 使用) ---
-    def simulate_ai_extraction(self, text):
-        import time
-        time.sleep(1.0)
-        # 這裡依舊保持 Mock，直到您準備好接真實 API
-        mock_nodes = [
-            {"id": "馬份", "title": "史萊哲林學生", "type": "character"},
-            {"id": "史內卜", "title": "魔藥學教授", "type": "character"}
-        ]
-        mock_edges = [
-            {"source": "史內卜", "target": "馬份", "label": "偏袒"},
-            {"source": "馬份", "target": "哈利波特", "label": "死對頭"}
-        ]
-        return mock_nodes, mock_edges
+    # --- 真實 AI 處理邏輯 (Real AI) ---
+    def process_text_with_ai(self, text, api_key):
+        """
+        呼叫 OpenAI API 進行實體關係萃取
+        """
+        client = OpenAI(api_key=api_key)
+        
+        # 這是給 AI 的指令 (Prompt Engineering)
+        system_prompt = """
+        你是一個知識圖譜專家。請從使用者的文本中萃取「實體(Character)」與「關係(Relationship)」。
+        請務必回傳純 JSON 格式，不要包含 Markdown 標記或其他文字。
+        格式如下：
+        {
+            "nodes": [{"id": "角色名", "title": "角色描述", "type": "character"}],
+            "edges": [{"source": "角色名", "target": "角色名", "label": "關係類型"}]
+        }
+        """
+        
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o", # 或 gpt-3.5-turbo
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": text}
+                ],
+                response_format={"type": "json_object"}, # 強制回傳 JSON，超重要！
+                temperature=0.1 # 降低隨機性，讓結果更精準
+            )
+            
+            # 解析回傳的資料
+            raw_content = response.choices[0].message.content
+            result = json.loads(raw_content)
+            
+            return result.get("nodes", []), result.get("edges", []), None
+            
+        except Exception as e:
+            return [], [], str(e)
 
     def batch_import(self, graph, nodes, edges):
         count_n = 0
