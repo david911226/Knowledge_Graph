@@ -7,7 +7,7 @@ def initialize_session_state():
     """初始化 Session State，確保圖譜物件存在"""
     if 'graph' not in st.session_state:
         # 創建一個空的 NetworkX 圖物件
-        st.session_state['graph'] = nx.Graph()
+        st.session_state['graph'] = nx.DiGraph()
 
 # 核心邏輯函式
 def add_character(name, description=""):
@@ -20,12 +20,13 @@ def add_character(name, description=""):
 
 def add_relationship(source, target, relationship_type):
     """新增一條關係邊到圖中"""
-    if source and target and relationship_type:
-        if st.session_state['graph'].has_edge(source, target):
-            st.warning(f"'{source}' 和 '{target}' 之間的關係已存在。")
-        else:
-            st.session_state['graph'].add_edge(source, target, label=relationship_type)
-            st.success(f"成功建立關係：{source} -[{relationship_type}]-> {target}")
+    # 檢查是否已經有 "source -> target" 的關係
+    if st.session_state['graph'].has_edge(source, target):
+        st.warning(f"'{source}' 到 '{target}' 的關係已存在。")
+    else:
+        # DiGraph 會自動記錄方向
+        st.session_state['graph'].add_edge(source, target, label=relationship_type)
+        st.success(f"成功建立關係：{source} --[{relationship_type}]--> {target}")
 
 # 資料持久化
 def save_graph_to_json(filename):
@@ -43,7 +44,7 @@ def load_graph_from_json(uploaded_file):
     """從上傳的 JSON 檔案讀取圖譜資料"""
     try:
         graph_data = json.load(uploaded_file)
-        st.session_state['graph'] = nx.node_link_graph(graph_data)
+        st.session_state['graph'] = nx.node_link_graph(graph_data, directed=True)
         st.success(f"已成功從 {uploaded_file.name} 載入圖譜！")
     except Exception as e:
         st.error(f"載入失敗：{e}")

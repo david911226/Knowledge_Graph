@@ -54,10 +54,28 @@ def draw_graph():
         return
 
     # 初始化 pyvis Network
-    net = Network(height="750px", width="100%", bgcolor="#222222", font_color="white", notebook=True)
+    net = Network(height="750px", width="100%", bgcolor="#222222", font_color="white", notebook=True, directed=True)
     
     # 從 NetworkX graph 添加節點和邊
     net.from_nx(st.session_state['graph'])
+
+    # 讓 PyVis 使用「有向圖」的預設排版，避免雙向關係線條重疊
+    net.set_options("""
+    var options = {
+      "edges": {
+        "arrows": {
+          "to": {
+            "enabled": true,
+            "scaleFactor": 1
+          }
+        },
+        "smooth": {
+          "type": "curvedCW",
+          "roundness": 0.2
+        }
+      }
+    }
+    """)
     
     # 產生 HTML 檔案
     try:
