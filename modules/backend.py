@@ -11,8 +11,9 @@ class GraphManager:
 
     def get_initial_graph(self):
         """回傳一個空的或預設的圖"""
-        G = nx.Graph()
-        # 預設範例 (您可以選擇是否保留)
+        # ✅ 修改 1: 確保使用有向圖 (DiGraph) 以支援箭頭
+        G = nx.DiGraph()
+        # 預設範例
         G.add_node("哈利波特", title="存活下來的男孩", type="character", group=1)
         G.add_node("榮恩", title="哈利的好友", type="character", group=1)
         G.add_edge("哈利波特", "榮恩", label="摯友")
@@ -25,8 +26,10 @@ class GraphManager:
         return True, f"✅ Added character: {name}"
 
     def add_relationship(self, graph, source, target, relation):
+        # ✅ 修改 2: 在 DiGraph 中，has_edge(A, B) 只會檢查 A->B
+        # 所以這裡的檢查邏輯是正確的，它不會阻擋 B->A (雙向關係)
         if graph.has_edge(source, target):
-            return False, f"⚠️ Relationship between '{source}' and '{target}' already exists."
+            return False, f"⚠️ Relationship '{source} -> {target}' already exists."
         graph.add_edge(source, target, label=relation)
         return True, f"🔗 Connected: {source} --[{relation}]--> {target}"
     
@@ -51,8 +54,8 @@ class GraphManager:
         try:
             # 讀取 JSON 資料
             graph_data = json.load(uploaded_file)
-            # 轉換回 NetworkX 物件
-            G = nx.node_link_graph(graph_data)
+            # ✅ 修改 3: 讀檔時必須指定 directed=True，否則箭頭會消失
+            G = nx.node_link_graph(graph_data, directed=True)
             return G, f"📂 Successfully loaded graph from {uploaded_file.name}"
         except Exception as e:
             return None, f"❌ Load failed: {str(e)}"
@@ -108,3 +111,39 @@ class GraphManager:
                     graph.add_edge(e["source"], e["target"], label=e["label"])
                     count_e += 1
         return f"✅ Batch imported {count_n} characters and {count_e} relationships."
+    
+    # --- 新增功能區 (已翻譯成英文) ---
+
+    def delete_character(self, graph, name):
+        """刪除角色及其相關連線"""
+        if graph.has_node(name):
+            graph.remove_node(name)
+            return True, f"🗑️ Deleted character: {name}"
+        else:
+            return False, f"⚠️ Character '{name}' not found."
+
+    def delete_relationship(self, graph, source, target):
+        """刪除兩個角色之間的關係"""
+        if graph.has_edge(source, target):
+            graph.remove_edge(source, target)
+            return True, f"🗑️ Removed relationship: {source} -> {target}"
+        else:
+            return False, f"⚠️ Relationship not found: {source} -> {target}"
+
+    def edit_character_description(self, graph, name, new_description):
+        """修改角色描述"""
+        if graph.has_node(name):
+            # 更新節點屬性
+            graph.nodes[name]['title'] = new_description
+            return True, f"✏️ Updated description for {name}"
+        else:
+            return False, f"⚠️ Character '{name}' not found."
+        
+    def edit_relationship_label(self, graph, source, target, new_label):
+        """修改關係的類型（標籤）"""
+        if graph.has_edge(source, target):
+            # 直接覆蓋原本的 label
+            graph[source][target]['label'] = new_label
+            return True, f"✏️ Updated relationship: {source} --[{new_label}]--> {target}"
+        else:
+            return False, f"⚠️ Relationship not found: {source} -> {target}"
