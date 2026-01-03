@@ -78,10 +78,6 @@ class GraphManager:
     def load_graph(self, uploaded_file):
         try:
             graph_data = json.load(uploaded_file)
-<<<<<<< HEAD
-=======
-            # 讀檔時必須指定 directed=True，否則 NetworkX 可能會預設為無向圖
->>>>>>> main
             G = nx.node_link_graph(graph_data, directed=True)
             return G, f"📂 成功讀取專案：{uploaded_file.name}"
         except Exception as e:
