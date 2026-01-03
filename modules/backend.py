@@ -10,9 +10,9 @@ class GraphManager:
             os.makedirs('data')
 
     def get_initial_graph(self):
-        """建立初始圖表 (使用有向圖 DiGraph 以支援箭頭)"""
+        """建立初始圖表 (使用有向圖 DiGraph)"""
         G = nx.DiGraph()
-        # 預設範例
+        # 加入預設範例資料
         G.add_node("哈利波特", title="存活下來的男孩", type="character", group=1)
         G.add_node("榮恩", title="哈利的好友", type="character", group=1)
         G.add_edge("哈利波特", "榮恩", label="摯友")
@@ -78,7 +78,6 @@ class GraphManager:
     def load_graph(self, uploaded_file):
         try:
             graph_data = json.load(uploaded_file)
-            # 讀檔時必須指定 directed=True，否則 NetworkX 可能會預設為無向圖
             G = nx.node_link_graph(graph_data, directed=True)
             return G, f"📂 成功讀取專案：{uploaded_file.name}"
         except Exception as e:
