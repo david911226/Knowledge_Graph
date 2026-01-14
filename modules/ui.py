@@ -1,5 +1,8 @@
 import streamlit as st
 import streamlit.components.v1 as components
+import os
+import json
+import networkx as nx
 
 def render_sidebar():
     with st.sidebar:
@@ -23,11 +26,28 @@ def render_sidebar():
         if api_key_input:
             st.caption("✅ 已輸入 Key")
         else:
-            st. warning("⚠️ 請輸入以啟用 AI 功能")
-            # 然後在警告下方顯示 info 框（包含按鈕）
-            with st.container():
-                st.info("尚未擁有 Key？\n\n點擊下方按鈕免費產生")
-                st.link_button("產生 Groq API Key（免費）", "https://console.groq.com/keys", use_container_width=True)
+            st.warning("⚠️ 請輸入以啟用 AI 功能")
+            
+            # 使用自定義容器包裹 info 框和按鈕
+            st.markdown("""
+                <div style="
+                    background-color: rgba(33, 150, 243, 0.1);
+                    border-left: 4px solid #2196F3;
+                    padding:  12px 16px;
+                    border-radius: 4px;
+                    margin:  8px 0;
+                ">
+                    <p style="margin: 0; color: #E3E3E3; font-size:  14px; line-height: 1.5;">
+                        尚未擁有 Key？<br><br>點擊下方按鈕免費產生
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            st.link_button(
+                "產生 Groq API Key（免費）", 
+                "https://console.groq.com/keys", 
+                use_container_width=True
+            )
         
         st.markdown("---")
         
@@ -65,7 +85,7 @@ def render_sidebar():
                         let buttons = Array.from(doc.querySelectorAll('button'));
                         
                         if (e.shiftKey) {
-                            let btn = buttons.find(b => b.innerText.includes("Redo"));
+                            let btn = buttons.find(b => b.innerText. includes("Redo"));
                             if (btn) btn.click();
                         } else {
                             let btn = buttons.find(b => b.innerText.includes("Undo"));
@@ -90,6 +110,53 @@ def render_sidebar():
                     success, msg = st.session_state['manager'].save_graph(st.session_state['graph'], project_name)
                     if success:  st.toast(msg, icon="💾")
                     else: st.error(msg)
+            
+            st.caption("載入專案")
+            uploaded_file = st.file_uploader("選擇 JSON 檔案", type="json", label_visibility="collapsed")
+            if uploaded_file is not None: 
+                if st.button("Load Project", width='stretch'):
+                    new_graph, msg = st.session_state['manager'].load_graph(uploaded_file)
+                    if new_graph: 
+                        st.session_state['graph'] = new_graph
+                        components.html("<script>localStorage.removeItem('nexus_graph_positions'); window.parent.location.reload();</script>", height=0)
+                        st. toast(msg, icon="📂")
+                    else:
+                        st.error(msg)
+            
+            # 新增：載入範例按鈕
+            st.caption("快速開始")
+            if st.button("📚 載入哈利波特範例", use_container_width=True, type="secondary"):
+                example_file = "data/example_harry_potter.json"
+                if os.path.exists(example_file):
+                    try: 
+                        with open(example_file, 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                        
+                        graph = nx.DiGraph()
+                        
+                        # 載入節點
+                        for node in data.get('nodes', []):
+                            graph. add_node(
+                                node['id'],
+                                label=node.get('label', node['id']),
+                                title=node.get('title', '')
+                            )
+                        
+                        # 載入邊
+                        for edge in data.get('edges', []):
+                            graph.add_edge(
+                                edge['from'],
+                                edge['to'],
+                                label=edge.get('label', '')
+                            )
+                        
+                        st.session_state['graph'] = graph
+                        components.html("<script>localStorage.removeItem('nexus_graph_positions'); window.parent.location.reload();</script>", height=0)
+                        st.toast("✨ 已載入哈利波特範例圖譜！", icon="📚")
+                    except Exception as e: 
+                        st.error(f"載入失敗：{e}")
+                else:
+                    st.error("找不到範例檔案：data/example_harry_potter.json")
 
         st.markdown("---")
         st.header("👀 檢視設定")
@@ -117,26 +184,14 @@ def render_sidebar():
             if st.session_state['graph'].number_of_nodes() > 0:
                 top_nodes = st.session_state['manager'].analyze_centrality(st. session_state['graph'])
                 for rank, (name, score) in enumerate(top_nodes, 1):
-                    st. write(f"**#{rank} {name}**")
+                    st.write(f"**#{rank} {name}**")
                     st.progress(score) 
             else:
                 st.caption("尚無資料")
         else:
             st. caption("請更新 backend. py 啟用分析功能")
-            
-        st.markdown("---")
-        
-        uploaded_file = st.file_uploader("選擇 JSON 檔案", type="json", label_visibility="collapsed")
-        if uploaded_file is not None: 
-            if st.button("Load Project", width='stretch'):
-                new_graph, msg = st.session_state['manager'].load_graph(uploaded_file)
-                if new_graph:
-                    st.session_state['graph'] = new_graph
-                    components.html("<script>localStorage.removeItem('nexus_graph_positions'); window.parent.location.reload();</script>", height=0)
-                    st.toast(msg, icon="📂")
-                else:
-                    st.error(msg)
     
+        st.markdown("<br>", unsafe_allow_html=True)
         st.caption("Designed by Loh Rui Kang")
 
 def render_main_tabs():
@@ -154,7 +209,7 @@ def render_main_tabs():
                         st.session_state['graph'], c_name, c_desc
                     )
                     if success:  st.toast(msg, icon="✅")
-                    else: st.error(msg)
+                    else:  st.error(msg)
 
     # 建立連結
     with tab_rel:
@@ -167,10 +222,10 @@ def render_main_tabs():
             
             if st.form_submit_button("建立連結", width='stretch'):
                 if source == target: st.warning("⚠️ 來源與目標不能是同一個人！")
-                elif not relation:  st.error("❌ 請輸入關係類型！")
+                elif not relation: st.error("❌ 請輸入關係類型！")
                 else:
-                    success, msg = st.session_state['manager'].add_relationship(
-                        st. session_state['graph'], source, target, relation
+                    success, msg = st.session_state['manager']. add_relationship(
+                        st.session_state['graph'], source, target, relation
                     )
                     if success: st.toast(msg, icon="🔗")
                     else:  st.error(msg)
@@ -186,7 +241,7 @@ def render_main_tabs():
             if not source_text: st.warning("⚠️ 請先貼上文章內容！")
             elif not api_key:  st.error("❌ 尚未設定 API Key！")
             else:
-                with st.spinner("🤖 AI 正在分析關係... "):
+                with st.spinner("🤖 AI 正在分析關係..."):
                     ai_nodes, ai_edges, error = st.session_state['manager'].process_text_with_ai(source_text, api_key)
                     
                     if not ai_nodes and not ai_edges and not error:
@@ -212,7 +267,7 @@ def render_main_tabs():
                     del st.session_state['ai_result']
                     st.rerun()
             with b2:
-                if st.button("🗑️ 放棄", width='stretch', key="btn_cancel_ai"):
+                if st. button("🗑️ 放棄", width='stretch', key="btn_cancel_ai"):
                     del st.session_state['ai_result']
                     st.rerun()
 
@@ -223,13 +278,13 @@ def render_main_tabs():
             if del_type == "角色": 
                 del_node = st.selectbox("選擇角色", options=list(st. session_state['graph'].nodes()), key="del_node")
                 if st.button("確認刪除", type="primary", width='stretch'):
-                    success, msg = st.session_state['manager'].delete_character(st.session_state['graph'], del_node)
+                    success, msg = st. session_state['manager'].delete_character(st.session_state['graph'], del_node)
                     if success: st.toast(msg, icon="🗑️"); st.rerun()
                     else: st.error(msg)
             elif del_type == "關係":
-                edge_options = [f"{u} -> {v}" for u, v in st.session_state['graph'].edges()]
+                edge_options = [f"{u} -> {v}" for u, v in st.session_state['graph']. edges()]
                 if not edge_options:  st.info("無關係可刪除")
-                else:
+                else: 
                     del_edge_str = st.selectbox("選擇關係", options=edge_options, key="del_edge")
                     if st.button("確認刪除", type="primary", width='stretch'):
                         u, v = del_edge_str.split(" -> ")
@@ -248,7 +303,7 @@ def render_main_tabs():
                 new_desc = st.text_area("更新描述", value=current_desc)
                 if st.button("更新", width='stretch'):
                     success, msg = st.session_state['manager'].edit_character_description(st.session_state['graph'], edit_node, new_desc)
-                    if success: st.toast(msg, icon="✏️"); st.rerun()
+                    if success:  st.toast(msg, icon="✏️"); st.rerun()
                     else: st.error(msg)
             elif edit_type == "關係標籤": 
                 edge_options = [f"{u} -> {v}" for u, v in st.session_state['graph'].edges()]
