@@ -3,3 +3,7 @@ __pycache__/
 .DS_Store
 *.html
 lib/
+
+*.json
+# 保留 example
+! data/example_harry_potter. json
